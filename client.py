@@ -66,11 +66,27 @@ def client():
         return
     
     client_private_key = loadPrivateKey("client_private.pem")
-
-    encrypted_aes_key = clientSocket.recv(4096)
-    aes_key = PKCS1_OAEP.new(client_private_key).decrypt(encrypted_aes_key)
-
-    print("secure connection established")
+    # Server will send either a plaintext error message or an RSA-encrypted AES key.
+    try:
+        # try to decrypt as RSA first
+        aes_key = PKCS1_OAEP.new(client_private_key).decrypt(response)
+        print("secure connection established")
+    except Exception:
+        # fallback: else try to decode a text error message
+        try:
+            text = response.decode()
+            if text == "invalid username or password":
+                print("Invalid username or password\nTerminating connection")
+                clientSocket.close()
+                return
+            else:
+                print("Unexpected server response:", text)
+                clientSocket.close()
+                return
+        except Exception:
+            print("Could not process server response")
+            clientSocket.close()
+            return
 
 
     while True:
@@ -82,7 +98,7 @@ def client():
         clientSocket.send(encrypted_msg)
 
         reply = clientSocket.recv(4096)
-        decrypted_reply = easDecrypt(reply, aes_key)
+        decrypted_reply = aesDecrypt(reply, aes_key)
 
         print("Server: ", decrypted_reply)
     
