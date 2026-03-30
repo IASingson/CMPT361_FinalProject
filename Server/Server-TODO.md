@@ -46,7 +46,7 @@
     - save the email in all destination client inboxes as `{client_username}_{email_title}.txt`
 
 ### Viewing Inbox subprotocol
-[S] sends list of all client's emails sorted by date and time, each email should have `[index, source client username, data nd time, and title]`
+[S] sends list of all client's emails sorted by date and time, each email should have `[index, source client username, date and time, and title]`
 
 [C] receives, decrypts, prints, and sends server __encrypted__ `"OK"`
 
