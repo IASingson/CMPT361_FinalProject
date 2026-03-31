@@ -1,15 +1,11 @@
 # TODO: 
-# - Remove debug prints
 # - Add more comments to code
-# - Remove Threading mode and related code (Using for Test purposes on Windows)
-# - Remove `import threading`
 
 import socket
 import json 
 import os
 import datetime
 import glob
-import threading
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
@@ -23,7 +19,8 @@ menuMsg = "Select the operation:\n\t1) Create and send an Email\n\t2) Display th
 # Time and Date: [timestamp when email was received]\n
 # Title: [subject of email (with 100 character limit)] \n
 # Content Length: [numbers of characters in content] \n
-# Content: [body of email (with 1,000,000 character limit)]1
+# Content: [body of email (with 1,000,000 character limit)]
+
 class Email:
     def __init__(self, sender, recipient, subject, body, subject_length):
         self.sender = sender
@@ -75,7 +72,7 @@ def server():
             return None
         return decrypt_aes(sym_key, payload)
 
-    # Base directory of this server script (where server keys live)
+    # Base directory of Server.py
     base_dir = os.path.abspath(os.path.dirname(__file__))
 
     # Create server Public and Private Keys inside the server directory if they don't exist
@@ -100,35 +97,25 @@ def server():
     # Listen for a max of 5 incoming connections
     server_socket.listen(5)
 
-    # --------------------------------------------------------------------------------
-    # Enable threading mode for testing on Windows (since fork() is not available)
-    use_threading = True
-    # use_threading = False
-    if use_threading:
-        print("Debug: USE_THREADING is on. Server will use threads instead of fork()")
-    # --------------------------------------------------------------------------------
-
     # Accept loop: fork when available, otherwise handle single
     def handle_client(client_socket, client_addr):
-        print(f"Debug: Connection from {client_addr}")
+        
         try:
             # Receive credentials encrypted with server public key (client sends raw RSA ciphertext)
             enc_credentials = client_socket.recv(4096)
-            print(f"Debug: Received encrypted credentials ({len(enc_credentials)} bytes)")
             if not enc_credentials:
                 client_socket.close()
                 if hasattr(os, 'fork'):
                     os._exit(0)
                 return
 
-            # Decrypt with server private key (from server directory)
+            # Decrypt with server private key (from server directory), with error handling
             try:
                 with open(server_priv_path, 'rb') as f:
                     private = RSA.import_key(f.read())
             except Exception:
                 client_socket.send(b"Server private key not available")
                 client_socket.close()
-                print("Debug: server_private.pem missing or unreadable")
                 if hasattr(os, 'fork'):
                     os._exit(0)
                 return
@@ -138,7 +125,6 @@ def server():
             except Exception:
                 client_socket.send(b"Invalid credential encryption")
                 client_socket.close()
-                print("Debug: Failed to decrypt credentials")
                 if hasattr(os, 'fork'):
                     os._exit(0)
                 return
@@ -147,11 +133,9 @@ def server():
             try:
                 cred_text = credentials_bytes.decode()
                 username, password = cred_text.split(' ', 1)
-                print(f"Debug: Received credentials for username: {username}")
             except Exception:
                 client_socket.send(b"Invalid credential format")
                 client_socket.close()
-                print("Debug: Failed to parse credentials")
                 if hasattr(os, 'fork'):
                     os._exit(0)
                 return
@@ -168,7 +152,6 @@ def server():
                     if not os.path.exists(client_public_key_path):
                         client_socket.send(b"Client public key not found on server")
                         client_socket.close()
-                        print(f"Debug: Public key for {username} not found. Connection terminated.")
                         if hasattr(os, 'fork'):
                             os._exit(0)
                         return
@@ -225,10 +208,11 @@ def server():
                     for r in recipients:
                         inbox_dir = os.path.join(base_dir, r)
                         os.makedirs(inbox_dir, exist_ok=True)
-                        # sanitize title for filename
+                        # Clean title for filename
                         safe_title = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in title).strip()
                         filename = f"{sender}_{safe_title}.txt"
                         filepath = os.path.join(inbox_dir, filename)
+                        # Save email in specified Email format
                         with open(filepath, 'w', encoding='utf-8') as email:
                             email.write(f"From: {sender}\n")
                             email.write(f"To: {';'.join(recipients)}\n")
@@ -257,6 +241,7 @@ def server():
                             src, title_part = base, base
                         title = title_part.replace('_', ' ')
                         time = datetime.datetime.fromtimestamp(os.path.getmtime(fpath)).isoformat()
+                        # Format into single string to send to client
                         out.append({'index': i, 'source': src, 'time': time, 'title': title})
                     send_encrypted(client_socket, sym_key, json.dumps(out))
                     # Wait for `OK` from client
@@ -266,10 +251,13 @@ def server():
                     send_encrypted(client_socket, sym_key, "the server request email index")
                     index_str = recv_encrypted(client_socket, sym_key)
                     try:
+                        # Check if index_str is actually an integer
                         index = int(index_str)
                     except Exception:
                         send_encrypted(client_socket, sym_key, "Invalid index")
                         continue
+
+                    # Get email content based on index (sorted by modified time, to match viewing inbox subprotocol)
                     inbox_dir = os.path.join(base_dir, username)
                     files = glob.glob(os.path.join(inbox_dir, '*.txt'))
                     files.sort(key=lambda p: os.path.getmtime(p), reverse=True)
@@ -285,6 +273,7 @@ def server():
                     print(f"Terminating connection with {username}")
                     break
         finally:
+            # Ensure socket is closed and child process exits on any exception
             try:
                 client_socket.close()
             except Exception:
@@ -293,20 +282,18 @@ def server():
                 os._exit(0)
             return
 
-    # Main accept new client connection loop
+    # Main loop for accepting new client connections
     while True:
         # Wait for a new client connection
         client_socket, client_addr = server_socket.accept()
 
-        # Prefer fork() unless `use_threading` is True; fall back to threads
-        # TODO: Remove all threading code and just use fork() as Assignment Requirements
-        if (not use_threading) and hasattr(os, 'fork'):
+        if hasattr(os, 'fork'):
             pid = os.fork()
             if pid == 0:
                 # Child process
                 server_socket.close()
                 handle_client(client_socket, client_addr)
-                # should never reach here
+                # Shouldnt reach here
                 os._exit(0)
             else:
                 # Parent process
@@ -317,14 +304,8 @@ def server():
                 # Continue accepting
                 continue
         else:
-            # Use threads for concurrency
-            try:
-                t = threading.Thread(target=handle_client, args=(client_socket, client_addr), daemon=True)
-                t.start()
-            except Exception:
-                # Fallback to sequential handling if thread creation fails
-                handle_client(client_socket, client_addr)
-            # Continue accepting next client
+            # No fork support, handle client in main thread (not concurrent)
+            handle_client(client_socket, client_addr)
             continue
 
 
