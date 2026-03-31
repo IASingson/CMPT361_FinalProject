@@ -1,3 +1,4 @@
+# TODO remove unneeded comments, add more detailed comments
 import sys
 import socket
 import os
@@ -41,17 +42,17 @@ def aesDecrypt(ciphertext, key):
 
 def client():
 
-    username = input("enter your username: ")
+    # username = input("enter your username: ")
 
-    private_key_file = f"{username}_private.pem"
-    public_key_file = f"{username}_public.pem"
+    # private_key_file = f"{username}_private.pem"
+    # public_key_file = f"{username}_public.pem"
 
-    if not (os.path.exists(private_key_file) and os.path.exists(public_key_file)):
-        key = RSA.generate(2048)
-        with open(private_key_file, 'wb') as f:
-            f.write(key.export_key('PEM'))
-        with open(public_key_file, 'wb') as f:
-            f.write(key.publickey().export_key('PEM'))
+    # if not (os.path.exists(private_key_file) and os.path.exists(public_key_file)):
+    #     key = RSA.generate(2048)
+    #     with open(private_key_file, 'wb') as f:
+    #         f.write(key.export_key('PEM'))
+    #     with open(public_key_file, 'wb') as f:
+    #         f.write(key.publickey().export_key('PEM'))
 
     serverName = input("Enter the server IP or Name: ")
     serverPort = 13000
@@ -85,7 +86,8 @@ def client():
     try:
         # try to decrypt as RSA first
         aes_key = PKCS1_OAEP.new(client_private_key).decrypt(response)
-        print("secure connection established")
+        clientSocket.send(aesEncrypt("OK",aes_key))
+        print("Secure Connection Established")
     except Exception:
         # fallback: else try to decode a text error message
         try:
@@ -103,25 +105,18 @@ def client():
             clientSocket.close()
             return
 
+    # Receive display menu from server
+    menuMsg = aesDecrypt(clientSocket.recv(4096), aes_key)
 
     while True:
-        print("1) Send Email")
-        print("2) List Inbox")
-        print("3) Read Email")
-        print("4) Exit")
-
-        choice = input("Enter Choice: ").strip()
+        # Display the menu get take user choice
+        choice = input(menuMsg).strip()
         encrypted_msg = aesEncrypt(choice, aes_key)
         clientSocket.send(encrypted_msg)
 
         if choice == "4":
             print("Terminating Connection")
             break
-        
-        # reply = clientSocket.recv(4096)
-        # decrypted_reply = aesDecrypt(reply, aes_key)
-
-        # print("Server: ", decrypted_reply)
 
         if choice == "1":
             recipients = input("enter recipients: ").strip()
@@ -133,7 +128,6 @@ def client():
                 "recipient": recipients,
                 "subject": subject,
                 "body": body
-
             })
     
             clientSocket.send(aesEncrypt(email_json,aes_key))
@@ -152,14 +146,12 @@ def client():
                     for email in inbox:
                         print(f"[{email['index']}] From: {email['source']} | Title: {email['title']} |Time: {email['time']}")
                     
-
-
             except json.JSONDecodeError:
                 print("error: failed to decode inbox JSON")
             except Exception as e:
                 print("Error reading inbox", e)
 
-            clientSocket.send(aesEncrypt("ok",aes_key))
+            clientSocket.send(aesEncrypt("OK",aes_key))
         
         elif choice == "3":
             index = input("enter email index to read: ").strip()

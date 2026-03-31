@@ -162,6 +162,10 @@ def server():
                     # Send RSA-encrypted sym_key to client
                     client_socket.send(enc_sym)
                     print(f"Connection Accepted and Symmetric Key Generated for client: {username}")
+
+                    client_socket.send(encrypt_aes(sym_key, menuMsg))
+
+                    _ = recv_encrypted(client_socket, sym_key) # Wait for "OK" client to acknowledge secure connection
                 else:
                     # Send error message as plaintext, print to server, and terminate connection
                     client_socket.send(b"invalid username or password")
