@@ -37,9 +37,6 @@ def aesDecrypt(ciphertext, key):
     return cipher.decrypt(ciphertext).decode().strip()
 
 
-
-
-
 def client():
 
     # username = input("enter your username: ")
@@ -140,11 +137,11 @@ def client():
                 inbox_json = aesDecrypt(clientSocket.recv(4096), aes_key)
                 inbox = json.loads(inbox_json)
                 if not inbox:
-                    print("inbox is empty")
+                    print("Inbox is empty")
                 else:
-                    print("inbox:")
+                    print(f"{'Index':<6} {'From':<15} {'DateTime':<26} {'Title':<100}")
                     for email in inbox:
-                        print(f"[{email['index']}] From: {email['source']} | Title: {email['title']} |Time: {email['time']}")
+                        print(f"{str(email['index']):<6} {email['source']:<15} {email['time']:<26} {email['title']:<100}")
                     
             except json.JSONDecodeError:
                 print("error: failed to decode inbox JSON")
@@ -154,13 +151,12 @@ def client():
             clientSocket.send(aesEncrypt("OK",aes_key))
         
         elif choice == "3":
-            index = input("enter email index to read: ").strip()
+            index = input("Enter the email index you wish to view: ").strip()
             clientSocket.send(aesEncrypt(index, aes_key))
 
+            subprotocol_request = aesDecrypt(clientSocket.recv(1024), aes_key)
             content = aesDecrypt(clientSocket.recv(4096), aes_key)
-            print("\n===Contents===")
-            print(content)
-            print("===============")
+            print("\n" + content + "\n")
 
         else:
             print("invalid choice, choose between 1-4")

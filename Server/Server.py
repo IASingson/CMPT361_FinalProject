@@ -268,9 +268,52 @@ def server():
                     if index < 1 or index > len(files):
                         send_encrypted(client_socket, sym_key, "Index out of range")
                         continue
+
+                    # Read and parse the stored email, then construct formatted response
                     with open(files[index-1], 'r', encoding='utf-8') as rf:
-                        content = rf.read()
-                    send_encrypted(client_socket, sym_key, content)
+                        lines = [line.rstrip('\n') for line in rf.readlines()]
+
+                    # Initialize email vars
+                    src = ''
+                    dest = ''
+                    timestamp = ''
+                    title = ''
+                    body = ''
+                    content_length = 0
+
+                    # Parsing from loading json wasnt working, so instead parse by prefix
+                    for line in lines:
+                        if line.startswith('From:'):
+                            src = line.partition(':')[2].strip()
+                        elif line.startswith('To:'):
+                            dest = line.partition(':')[2].strip()
+                        elif line.startswith('Time and Date:'):
+                            timestamp = line.partition(':')[2].strip()
+                        elif line.startswith('Title:'):
+                            title = line.partition(':')[2].strip()
+                        elif line.startswith('Content Length:'):
+                            try:
+                                content_length = int(line.partition(':')[2].strip())
+                            except Exception:
+                                content_length = 0
+                        elif line.startswith('Content:'):
+                            body = line.partition(':')[2]
+                            # Include extra lines in body
+                            idx = lines.index(line)
+                            if idx + 1 < len(lines):
+                                body = body + '\n' + '\n'.join(lines[idx+1:])
+                            body = body.strip()
+                            break
+
+                    # Construct formatted response for client
+                    resp = []
+                    resp.append(f"From: {src}")
+                    resp.append(f"To: {dest}")
+                    resp.append(f"Time and Date Received: {timestamp}")
+                    resp.append(f"Title: {title}")
+                    resp.append(f"Content Length: {len(body)}")
+                    resp.append(f"Contents: {body}")
+                    send_encrypted(client_socket, sym_key, "\n".join(resp))
 
                 else: # Terminate connection subprotocol
                     client_socket.close()
