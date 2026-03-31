@@ -74,12 +74,13 @@ def client():
 
     response = clientSocket.recv(4096)
 
-    if response == b"invalid username or password":
-        print("Invalid username or password\nTerminating connection")
+    try:
+        client_private_key = loadPrivateKey(f"{username}_private.pem")
+    except Exception:
         clientSocket.close()
+        print("Invalid username or password\nTerminating connection")
         return
     
-    client_private_key = loadPrivateKey(private_key_file)
     # Server will send either a plaintext error message or an RSA-encrypted AES key.
     try:
         # try to decrypt as RSA first
