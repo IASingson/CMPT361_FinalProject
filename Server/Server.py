@@ -78,12 +78,12 @@ def server():
     # Create server Public and Private Keys inside the server directory if they don't exist
     server_priv_path = os.path.join(base_dir, 'server_private.pem')
     server_pub_path = os.path.join(base_dir, 'server_public.pem')
-    if not (os.path.exists(server_priv_path) and os.path.exists(server_pub_path)):
-        key = RSA.generate(2048)
-        with open(server_priv_path, 'wb') as f:
-            f.write(key.export_key('PEM'))
-        with open(server_pub_path, 'wb') as f:
-            f.write(key.publickey().export_key('PEM'))
+    # if not (os.path.exists(server_priv_path) and os.path.exists(server_pub_path)):
+    #     key = RSA.generate(2048)
+    #     with open(server_priv_path, 'wb') as f:
+    #         f.write(key.export_key('PEM'))
+    #     with open(server_pub_path, 'wb') as f:
+    #         f.write(key.publickey().export_key('PEM'))
 
     # Create a TCP/IP socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
