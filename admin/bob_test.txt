@@ -1,0 +1,6 @@
+From: bob
+To: admin
+Time and Date: 2026-03-30T19:03:07.299042
+Title: test
+Content Length: 20
+Content: this email is a test
