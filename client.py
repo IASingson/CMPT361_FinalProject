@@ -118,10 +118,10 @@ def client():
             print("Terminating Connection")
             break
         
-        reply = clientSocket.recv(4096)
-        decrypted_reply = aesDecrypt(reply, aes_key)
+        # reply = clientSocket.recv(4096)
+        # decrypted_reply = aesDecrypt(reply, aes_key)
 
-        print("Server: ", decrypted_reply)
+        # print("Server: ", decrypted_reply)
 
         if choice == "1":
             recipients = input("enter recipients: ").strip()
@@ -152,6 +152,10 @@ def client():
                     for email in inbox:
                         print(f"[{email['index']}] From: {email['source']} | Title: {email['title']} |Time: {email['time']}")
                     
+
+
+            except json.JSONDecodeError:
+                print("error: failed to decode inbox JSON")
             except Exception as e:
                 print("Error reading inbox", e)
 
