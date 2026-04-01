@@ -39,18 +39,6 @@ def aesDecrypt(ciphertext, key):
 
 def client():
 
-    # username = input("enter your username: ")
-
-    # private_key_file = f"{username}_private.pem"
-    # public_key_file = f"{username}_public.pem"
-
-    # if not (os.path.exists(private_key_file) and os.path.exists(public_key_file)):
-    #     key = RSA.generate(2048)
-    #     with open(private_key_file, 'wb') as f:
-    #         f.write(key.export_key('PEM'))
-    #     with open(public_key_file, 'wb') as f:
-    #         f.write(key.publickey().export_key('PEM'))
-
     serverName = input("Enter the server IP or Name: ")
     serverPort = 13000
     try:
