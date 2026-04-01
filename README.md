@@ -5,15 +5,15 @@ Containing a secure mail transfer protocol, as well as an enhanced version prote
 
 ## Checklist
 - [x] Server.py built and working
-    - [x] Clean up unneeded comments
 - [x] Client.py built and working
-    - [ ] Clean up unneeded comments
-    - [ ] Add comments for clarity
 - [x] Server_enhanced.py built
 - [x] Client_enhanced.py built
 - [x] key_generator.py built
 
 ## Run Local
+```
+python key_generator.py # Generates all keys needed for use
+```
 ```
 python client.py
 ```
