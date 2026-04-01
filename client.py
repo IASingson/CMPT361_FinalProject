@@ -104,9 +104,22 @@ def client():
             break
 
         if choice == "1":
-            recipients = input("enter recipients: ").strip()
-            subject = input("enter the subject: ").strip()[:100]#100 char limit
-            body = input("enter the body of email: ").strip()[:10000]#10000 char limit
+            subprotocol_request = aesDecrypt(clientSocket.recv(1024), aes_key)
+            recipients = input("Enter recipients (separated by ;):").strip()
+            subject = input("Enter title: ").strip()[:100]#100 char limit
+            
+            # Ask user if they want to fill email body from file or console input
+            load_body_from_file = input("Would you like to load contents from a file?(Y/N): ")
+            if load_body_from_file.strip().upper() == 'Y':
+                filename = input("Enter filename: ")
+                try:
+                    with open(filename, 'r') as f:
+                        body = f.read()[:10000]  # 10000 char limit
+                except Exception as e:
+                    print("Error reading file:", e)
+                    body = ""
+            else:
+                body = input("Enter the body of email: ").strip()[:10000]#10000 char limit
 
             email_json = json.dumps({
                 "sender": username,
@@ -118,7 +131,7 @@ def client():
             clientSocket.send(aesEncrypt(email_json,aes_key))
 
             confirmation = aesDecrypt(clientSocket.recv(4096), aes_key)
-            print("server:", confirmation)
+            print("The message is sent to the server.", confirmation)
 
         elif choice == "2":
             try:
