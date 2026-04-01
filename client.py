@@ -1,177 +1,91 @@
-import sys
+import json
 import socket
 import os
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP, AES
-from Crypto.Random import get_random_bytes
-import json
+import datetime
+import sys
 
-def loadPublicKey(filename):
-    with open(filename, "rb") as f:
-        return RSA.import_key(f.read())
-    
-def loadPrivateKey(filename):
-    with open(filename, "rb") as f:
-        return RSA.import_key(f.read())
-    
-def rsa_encrypt(message, publicKey):
-    cipher = PKCS1_OAEP.new(publicKey)
-    return cipher.encrypt(message.encode())
-
-def rsa_decypt(message, privateKey):
-    cipher = PKCS1_OAEP.new(privateKey)
-    return cipher.decrypt(message)
-
-def pad(msg):
-    while len(msg) % 16 != 0:
-        msg += " "
-    return msg
-
-def aesEncrypt(msg, key):
-    cipher = AES.new(key, AES.MODE_ECB)
-    return cipher.encrypt(pad(msg).encode())
-
-def aesDecrypt(ciphertext, key):
-    cipher = AES.new(key, AES.MODE_ECB)
-    return cipher.decrypt(ciphertext).decode().strip()
-
-
-
-
+FORMAT = 'ascii'
+SIZE = 2048
 
 def client():
+    # server information
+    server_name = 'localhost'
+    server_port = 13000
 
-    username = input("enter your username: ")
-
-    private_key_file = f"{username}_private.pem"
-    public_key_file = f"{username}_public.pem"
-
-    if not (os.path.exists(private_key_file) and os.path.exists(public_key_file)):
-        key = RSA.generate(2048)
-        with open(private_key_file, 'wb') as f:
-            f.write(key.export_key('PEM'))
-        with open(public_key_file, 'wb') as f:
-            f.write(key.publickey().export_key('PEM'))
-
-    serverName = input("Enter the server IP or Name: ")
-    serverPort = 13000
+    # create client socket that uses IPv4 and TCP protocols
     try:
-        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        clientSocket.connect((serverName, serverPort))
-    except Exception as e: 
-        print("connection error:", e)
-        return
-    
-    #---------------------------------------
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    except socket.error as e:
+        print('Error in client socket creation', e)
+        sys.exit(1)
 
-    username = input("enter your username: ")
-    password = input("enter your password: ")
-
-    server_public_key = loadPublicKey("server_public.pem")
-
-    encryptedCredentials = rsa_encrypt(username + " " + password, server_public_key)
-    clientSocket.send(encryptedCredentials)
-
-    response = clientSocket.recv(4096)
-
-    if response == b"invalid username or password":
-        print("Invalid username or password\nTerminating connection")
-        clientSocket.close()
-        return
-    
-    client_private_key = loadPrivateKey(private_key_file)
-    # Server will send either a plaintext error message or an RSA-encrypted AES key.
     try:
-        # try to decrypt as RSA first
-        aes_key = PKCS1_OAEP.new(client_private_key).decrypt(response)
-        print("secure connection established")
-    except Exception:
-        # fallback: else try to decode a text error message
-        try:
-            text = response.decode()
-            if text == "invalid username or password":
-                print("Invalid username or password\nTerminating connection")
-                clientSocket.close()
-                return
-            else:
-                print("Unexpected server response:", text)
-                clientSocket.close()
-                return
-        except Exception:
-            print("Could not process server response")
-            clientSocket.close()
-            return
+        # client connects to the server
+        client_socket.connect((server_name, server_port))
 
+        # ask the client user for username and password 
+        client_username = input('Enter your username: ')
+        client_password = input ('Enter password: ')
 
-    while True:
-        print("1) Send Email")
-        print("2) List Inbox")
-        print("3) Read Email")
-        print("4) Exit")
+        # encrypt username and password with the server's public key
 
-        choice = input("Enter Choice: ").strip()
-        encrypted_msg = aesEncrypt(choice, aes_key)
-        clientSocket.send(encrypted_msg)
+        # send client's encrypted username and password to server 
 
-        if choice == "4":
-            print("Terminating Connection")
-            break
-        
-        # reply = clientSocket.recv(4096)
-        # decrypted_reply = aesDecrypt(reply, aes_key)
+        # if client user inputs wrong username and password
+        from_server = client_socket.recv(FORMAT).decode(SIZE)
+        if from_server == 'Invalid username or password':
+            print(from_server + '\nTerminating')
+            client_socket.close()
 
-        # print("Server: ", decrypted_reply)
-
-        if choice == "1":
-            recipients = input("enter recipients: ").strip()
-            subject = input("enter the subject: ").strip()[:100]#100 char limit
-            body = input("enter the body of email: ").strip()[:10000]#10000 char limit
-
-            email_json = json.dumps({
-                "sender": username,
-                "recipient": recipients,
-                "subject": subject,
-                "body": body
-
-            })
-    
-            clientSocket.send(aesEncrypt(email_json,aes_key))
-
-            confirmation = aesDecrypt(clientSocket.recv(4096), aes_key)
-            print("server:", confirmation)
-
-        elif choice == "2":
-            try:
-                inbox_json = aesDecrypt(clientSocket.recv(4096), aes_key)
-                inbox = json.loads(inbox_json)
-                if not inbox:
-                    print("inbox is empty")
-                else:
-                    print("inbox:")
-                    for email in inbox:
-                        print(f"[{email['index']}] From: {email['source']} | Title: {email['title']} |Time: {email['time']}")
-                    
-
-
-            except json.JSONDecodeError:
-                print("error: failed to decode inbox JSON")
-            except Exception as e:
-                print("Error reading inbox", e)
-
-            clientSocket.send(aesEncrypt("ok",aes_key))
-        
-        elif choice == "3":
-            index = input("enter email index to read: ").strip()
-            clientSocket.send(aesEncrypt(index, aes_key))
-
-            content = aesDecrypt(clientSocket.recv(4096), aes_key)
-            print("\n===Contents===")
-            print(content)
-            print("===============")
-
+        # otherwise decrypt message
         else:
-            print("invalid choice, choose between 1-4")
+            sym_key = client_socket.recv(FORMAT).decode(SIZE)
+            sym_key += 'Ok'
 
-    clientSocket.close()
-if __name__ == "__main__":
-    client()
+        # ask client for user menu choice
+        from_server = client_socket.recv(FORMAT).decode(SIZE)
+        to_server = input(from_server).encode(FORMAT)
+
+        # stay in loop while client choice is not 4) terminate the connection
+        while to_server != '4':
+
+            # if client choice is 1, perform sending email subprotocol
+            if to_server == '1':
+                # decrypt server message 
+
+                # ask client user to enter destination email usernames and email title 
+
+                # ask user to enter message through terminal or get message from existing text file
+
+                # create the email message according to section D 
+
+                # encrypt using the sym_key and send to server side
+
+                # print confirmation message to client user
+
+                print("The message is sent to the server.")
+                pass
+
+            # if client choice is 2, perform viewing inbox subprotocol
+            if to_server == '2':
+                
+
+            # if client choice is 3, perform viewing email subprotocol
+
+        
+                pass
+        
+
+
+
+    except socket.error as e:
+        print('An error occurred:', e)
+        client_socket.close()
+        sys.exit(1)
+
+#------------------------------------------------------------------
+client()
+    
+
+    
+    
