@@ -1,6 +1,3 @@
-# TODO: 
-# - Add more comments to code
-
 import socket
 import json 
 import os
@@ -12,14 +9,6 @@ from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.Random import get_random_bytes
 
 menuMsg = "Select the operation:\n\t1) Create and send an Email\n\t2) Display the inbox list\n\t3) Display the email contents\n\t4) Terminate the connection \n\nChoice: "
-
-# Email Format:
-# From: [source client username] \n
-# To: [list of destination client usernames separated by ;] \n
-# Time and Date: [timestamp when email was received]\n
-# Title: [subject of email (with 100 character limit)] \n
-# Content Length: [numbers of characters in content] \n
-# Content: [body of email (with 1,000,000 character limit)]
 
 class Email:
     def __init__(self, sender, recipient, subject, body, subject_length):
@@ -75,15 +64,9 @@ def server():
     # Base directory of Server.py
     base_dir = os.path.abspath(os.path.dirname(__file__))
 
-    # Create server Public and Private Keys inside the server directory if they don't exist
+    # Server key paths
     server_priv_path = os.path.join(base_dir, 'server_private.pem')
-    server_pub_path = os.path.join(base_dir, 'server_public.pem')
-    # if not (os.path.exists(server_priv_path) and os.path.exists(server_pub_path)):
-    #     key = RSA.generate(2048)
-    #     with open(server_priv_path, 'wb') as f:
-    #         f.write(key.export_key('PEM'))
-    #     with open(server_pub_path, 'wb') as f:
-    #         f.write(key.publickey().export_key('PEM'))
+    server_pub_path = os.path.join(base_dir, 'server_public.pem')    
 
     # Create a TCP/IP socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
