@@ -147,9 +147,28 @@ def server():
 
             # Check if username and password match the ones in user_pass.json
             users_file = os.path.join(base_dir, 'user_pass.json')
-            with open(users_file, 'r') as f:
+            with open(users_file, 'r+') as f:
                 users = json.load(f)
-                user = next((u for u in users if u['username'] == username and u['password'] == password), None)
+
+                hashed_password = hash_password(password)
+
+                # Accept either hashed passwords or plaintext for backward compatibility.
+                user = next(
+                    (
+                        u for u in users
+                        if u['username'] == username
+                        and (u['password'] == hashed_password or u['password'] == password)
+                    ),
+                    None
+                )
+
+                if user and user.get('password') != hashed_password:
+                    # Upgrade stored password to hashed version for security.
+                    user['password'] = hashed_password
+                    f.seek(0)
+                    json.dump(users, f, indent=4)
+                    f.truncate()
+
                 if user:
                     # Generate sym_key and send to client encrypted with client's public key
                     sym_key = get_random_bytes(32)

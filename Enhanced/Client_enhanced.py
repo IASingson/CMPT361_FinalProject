@@ -43,17 +43,20 @@ def hash_password(password, salt=b'static_salt_for_demo'):
 
 def client():
 
-    # username = input("enter your username: ")
+    username = input("enter your username: ")
 
-    # private_key_file = f"{username}_private.pem"
-    # public_key_file = f"{username}_public.pem"
+    private_key_file = f"{username}_private.pem"
+    public_key_file = f"{username}_public.pem"
 
-    # if not (os.path.exists(private_key_file) and os.path.exists(public_key_file)):
-    #     key = RSA.generate(2048)
-    #     with open(private_key_file, 'wb') as f:
-    #         f.write(key.export_key('PEM'))
-    #     with open(public_key_file, 'wb') as f:
-    #         f.write(key.publickey().export_key('PEM'))
+    if not (os.path.exists(private_key_file) and os.path.exists(public_key_file)):
+        key = RSA.generate(2048)
+        with open(private_key_file, 'wb') as f:
+            f.write(key.export_key('PEM'))
+        with open(public_key_file, 'wb') as f:
+            f.write(key.publickey().export_key('PEM'))
+
+    password = input("enter your password: ")
+
 
     serverName = input("Enter the server IP or Name: ")
     serverPort = 13000
@@ -66,8 +69,6 @@ def client():
     
     #---------------------------------------
 
-    username = input("enter your username: ")
-    password = input("enter your password: ")
     hashed_password = hash_password(password)
 
     server_public_key = loadPublicKey("server_public.pem")
