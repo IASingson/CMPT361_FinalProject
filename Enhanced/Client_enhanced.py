@@ -2,6 +2,7 @@
 import sys
 import socket
 import os
+import hashlib
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
 from Crypto.Random import get_random_bytes
@@ -36,9 +37,9 @@ def aesDecrypt(ciphertext, key):
     cipher = AES.new(key, AES.MODE_ECB)
     return cipher.decrypt(ciphertext).decode().strip()
 
-
-
-
+def hash_password(password, salt=b'static_salt_for_demo'):
+    """Hash password using PBKDF2 with SHA-256"""
+    return hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000).hex()
 
 def client():
 
@@ -67,10 +68,11 @@ def client():
 
     username = input("enter your username: ")
     password = input("enter your password: ")
+    hashed_password = hash_password(password)
 
     server_public_key = loadPublicKey("server_public.pem")
 
-    encryptedCredentials = rsa_encrypt(username + " " + password, server_public_key)
+    encryptedCredentials = rsa_encrypt(username + " " + hashed_password, server_public_key)
     clientSocket.send(encryptedCredentials)
 
     response = clientSocket.recv(4096)
@@ -113,11 +115,11 @@ def client():
         choice = input(menuMsg).strip()
         encrypted_msg = aesEncrypt(choice, aes_key)
         clientSocket.send(encrypted_msg)
-
+    #if choice is 4, we break the loop and close the connection. Otherwise, we handle the other choices as follows:
         if choice == "4":
             print("Terminating Connection")
             break
-
+    #if choice is 1, we prompt the user for email details and format in json then sends to sercer encrypted
         if choice == "1":
             recipients = input("enter recipients: ").strip()
             subject = input("enter the subject: ").strip()[:100]#100 char limit
@@ -134,7 +136,7 @@ def client():
 
             confirmation = aesDecrypt(clientSocket.recv(4096), aes_key)
             print("server:", confirmation)
-
+        #if choice is 2, request inbox from server and display
         elif choice == "2":
             try:
                 inbox_json = aesDecrypt(clientSocket.recv(4096), aes_key)
@@ -152,7 +154,7 @@ def client():
                 print("Error reading inbox", e)
 
             clientSocket.send(aesEncrypt("OK",aes_key))
-        
+        #if choice is 3, prompts user for index and display content
         elif choice == "3":
             index = input("enter email index to read: ").strip()
             clientSocket.send(aesEncrypt(index, aes_key))

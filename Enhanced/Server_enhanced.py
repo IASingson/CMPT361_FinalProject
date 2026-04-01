@@ -6,6 +6,7 @@ import json
 import os
 import datetime
 import glob
+import hashlib
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
@@ -40,6 +41,10 @@ class Email:
             'timestamp': self.timestamp
         }
     
+def hash_password(password, salt=b'static_salt_for_demo'):
+    """Hash password using PBKDF2 with SHA-256"""
+    return hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000).hex()
+
 def server():
     # Helpers for AES ECB I/O compatible with provided client
     def pad(msg: str) -> str:
@@ -284,7 +289,6 @@ def server():
                 pass
             if hasattr(os, 'fork'):
                 os._exit(0)
-            return
 
     # Main loop for accepting new client connections
     while True:

@@ -143,6 +143,13 @@ def main():
             # Send RSA-encrypted sym_key to client
             client_socket.send(enc_sym)
             print(f"Connection Accepted and Symmetric Key Generated for client: {username}")
+            
+            # Receive confirmation from client
+            confirmation = recv_encrypted(client_socket, sym_key)
+            if confirmation != "OK":
+                print(f"Debug: Expected 'OK' but received '{confirmation}'. Terminating.")
+                client_socket.close()
+                return
         else:
             # Send error message as plaintext, print to server, and terminate connection
             client_socket.send(b"invalid username or password")
@@ -152,6 +159,9 @@ def main():
 
     # After Authentication, loop menu options until client terminates connection
     while True:
+        # Send menu to client
+        send_encrypted(client_socket, sym_key, menuMsg)
+        
         # Receive client's encrypted message
         client_choice = recv_encrypted(client_socket, sym_key)
 
